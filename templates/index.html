@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <!-- This viewport tag makes the page mobile-friendly (the app checks for it too!) -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SEO Analyzer</title>
+  <meta name="description" content="Paste a URL to check its meta tags, see search and social previews, and get recommendations.">
+  <!-- url_for builds the correct path to files in the static/ folder -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <main class="container">
+    <header>
+      <h1>SEO Analyzer</h1>
+      <p class="subtitle">Paste a URL to check its meta tags, previews, and get recommendations.</p>
+    </header>
+
+    <!-- 1. URL input + Analyze button -->
+    <form id="analyze-form" class="search">
+      <input id="url-input" type="text" placeholder="example.com" autocomplete="off" autofocus>
+      <button id="analyze-btn" type="submit">Analyze</button>
+    </form>
+
+    <!-- Error / loading messages. `hidden` keeps them invisible until needed. -->
+    <p id="error" class="error" hidden></p>
+    <p id="loading" class="loading" hidden>Analyzing… this can take a few seconds.</p>
+
+    <!-- Everything below stays hidden until we have a report -->
+    <section id="results" hidden>
+
+      <!-- 3. Summary score -->
+      <div class="card score-card">
+        <div id="score-ring" class="score-ring">
+          <span id="score-value">0</span>
+        </div>
+        <div>
+          <h2 id="score-label">Score</h2>
+          <p id="score-url" class="muted"></p>
+          <p id="score-counts" class="muted"></p>
+        </div>
+      </div>
+
+      <!-- 2. Visual previews -->
+      <h2 class="section-title">Previews</h2>
+      <div class="previews">
+
+        <div class="card">
+          <h3>Website thumbnail</h3>
+          <img id="thumb-img" class="thumbnail" alt="Screenshot of the website">
+        </div>
+
+        <div class="card">
+          <h3>Google search result</h3>
+          <div class="google">
+            <div class="google-site">
+              <img id="g-favicon" class="favicon" alt="">
+              <div>
+                <div id="g-domain" class="google-domain"></div>
+                <div id="g-url" class="google-url"></div>
+              </div>
+            </div>
+            <div id="g-title" class="google-title"></div>
+            <div id="g-desc" class="google-desc"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Facebook / LinkedIn</h3>
+          <div class="social fb">
+            <div class="social-image" id="fb-image"></div>
+            <div class="social-text">
+              <div id="fb-domain" class="social-domain"></div>
+              <div id="fb-title" class="social-title"></div>
+              <div id="fb-desc" class="social-desc"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>X / Twitter</h3>
+          <div class="social tw">
+            <div class="social-image" id="tw-image"></div>
+            <div class="social-text">
+              <div id="tw-title" class="social-title"></div>
+              <div id="tw-desc" class="social-desc"></div>
+              <div id="tw-domain" class="social-domain"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. Checklist of present/missing tags with recommendations -->
+      <h2 class="section-title">Checks &amp; recommendations</h2>
+      <ul id="checks" class="checks"></ul>
+    </section>
+  </main>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
