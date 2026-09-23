@@ -18,7 +18,12 @@
 
     <!-- 1. URL input + Analyze button -->
     <form id="analyze-form" class="search">
-      <input id="url-input" type="text" placeholder="example.com" autocomplete="off" autofocus>
+      <!-- The wrapper lets us position the history dropdown right under the input -->
+      <div class="input-wrap">
+        <input id="url-input" type="text" placeholder="example.com" autocomplete="off" autofocus>
+        <!-- Previously analyzed URLs. Filled in by app.js, shown when the input is clicked. -->
+        <ul id="history" class="history" hidden></ul>
+      </div>
       <button id="analyze-btn" type="submit">Analyze</button>
     </form>
 
@@ -43,51 +48,57 @@
 
       <!-- 2. Visual previews -->
       <h2 class="section-title">Previews</h2>
-      <div class="previews">
+      <!-- Carousel: the cards sit in one row that scrolls sideways.
+           The ‹ › buttons float over the row's edges. -->
+      <div class="carousel">
+        <button id="prev-btn" class="carousel-btn prev" type="button" aria-label="Previous preview">‹</button>
+        <div id="previews" class="previews">
 
-        <div class="card">
-          <h3>Website thumbnail</h3>
-          <img id="thumb-img" class="thumbnail" alt="Screenshot of the website">
-        </div>
+          <div class="card">
+            <h3>Website thumbnail</h3>
+            <img id="thumb-img" class="thumbnail" alt="Screenshot of the website">
+          </div>
 
-        <div class="card">
-          <h3>Google search result</h3>
-          <div class="google">
-            <div class="google-site">
-              <img id="g-favicon" class="favicon" alt="">
-              <div>
-                <div id="g-domain" class="google-domain"></div>
-                <div id="g-url" class="google-url"></div>
+          <div class="card">
+            <h3>Google search result</h3>
+            <div class="google">
+              <div class="google-site">
+                <img id="g-favicon" class="favicon" alt="">
+                <div>
+                  <div id="g-domain" class="google-domain"></div>
+                  <div id="g-url" class="google-url"></div>
+                </div>
+              </div>
+              <div id="g-title" class="google-title"></div>
+              <div id="g-desc" class="google-desc"></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Facebook / LinkedIn</h3>
+            <div class="social fb">
+              <div class="social-image" id="fb-image"></div>
+              <div class="social-text">
+                <div id="fb-domain" class="social-domain"></div>
+                <div id="fb-title" class="social-title"></div>
+                <div id="fb-desc" class="social-desc"></div>
               </div>
             </div>
-            <div id="g-title" class="google-title"></div>
-            <div id="g-desc" class="google-desc"></div>
           </div>
-        </div>
 
-        <div class="card">
-          <h3>Facebook / LinkedIn</h3>
-          <div class="social fb">
-            <div class="social-image" id="fb-image"></div>
-            <div class="social-text">
-              <div id="fb-domain" class="social-domain"></div>
-              <div id="fb-title" class="social-title"></div>
-              <div id="fb-desc" class="social-desc"></div>
+          <div class="card">
+            <h3>X / Twitter</h3>
+            <div class="social tw">
+              <div class="social-image" id="tw-image"></div>
+              <div class="social-text">
+                <div id="tw-title" class="social-title"></div>
+                <div id="tw-desc" class="social-desc"></div>
+                <div id="tw-domain" class="social-domain"></div>
+              </div>
             </div>
           </div>
         </div>
-
-        <div class="card">
-          <h3>X / Twitter</h3>
-          <div class="social tw">
-            <div class="social-image" id="tw-image"></div>
-            <div class="social-text">
-              <div id="tw-title" class="social-title"></div>
-              <div id="tw-desc" class="social-desc"></div>
-              <div id="tw-domain" class="social-domain"></div>
-            </div>
-          </div>
-        </div>
+        <button id="next-btn" class="carousel-btn next" type="button" aria-label="Next preview">›</button>
       </div>
 
       <!-- 4. Checklist of present/missing tags with recommendations -->

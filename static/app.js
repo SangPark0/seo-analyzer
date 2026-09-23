@@ -21,6 +21,7 @@ form.addEventListener("submit", async (event) => {
   }
 
   // Reset the UI into a "loading" state.
+  hideHistory();
   showError(null);
   $("results").hidden = true;
   $("loading").hidden = false;
@@ -40,6 +41,8 @@ form.addEventListener("submit", async (event) => {
       showError(data.error || "Something went wrong.");
       return;
     }
+    // Only remember URLs that worked, so typos don't clutter the history.
+    saveToHistory(url);
     renderReport(data);
   } catch (err) {
     // This happens if our own Flask server is down or unreachable.
@@ -50,6 +53,121 @@ form.addEventListener("submit", async (event) => {
     button.disabled = false;
   }
 });
+
+// ---------------------------------------------------------------------------
+// Recent URLs (shown in a dropdown when the input is clicked)
+// ---------------------------------------------------------------------------
+//
+// We keep the list in `localStorage`: a small key/value store built into the
+// browser. It survives page reloads, but lives only in this browser.
+// localStorage can only store text, so we convert the list to/from JSON.
+// Every access is wrapped in try/catch because some browsers block it
+// (e.g. private windows) - the app should still work, just without history.
+
+const HISTORY_KEY = "seo-analyzer-history";
+const HISTORY_MAX = 5;
+const historyList = $("history");
+
+function loadHistory() {
+  try {
+    return JSON.parse(localStorage.getItem(HISTORY_KEY)) || [];
+  } catch {
+    return [];
+  }
+}
+
+function saveToHistory(url) {
+  // Put the newest URL first, drop any older copy of it, keep only 5.
+  const list = [url, ...loadHistory().filter((u) => u !== url)].slice(0, HISTORY_MAX);
+  try {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(list));
+  } catch {
+    // Storage unavailable - silently skip.
+  }
+}
+
+// `filter` is true only while the user is typing. On click/focus we show the
+// whole list; otherwise the URL left in the box from the last analysis would
+// filter out every other entry.
+function showHistory(filter = false) {
+  const typed = filter ? input.value.trim().toLowerCase() : "";
+  const matches = loadHistory().filter((u) => u.toLowerCase().includes(typed));
+
+  if (matches.length === 0) {
+    hideHistory();
+    return;
+  }
+
+  historyList.innerHTML = "";
+  const label = document.createElement("li");
+  label.className = "history-label";
+  label.textContent = "Recent";
+  historyList.append(label);
+
+  for (const url of matches) {
+    const li = document.createElement("li");
+    const btn = document.createElement("button");
+    btn.type = "button"; // a plain button, so it doesn't submit the form by itself
+    btn.textContent = url;
+    btn.addEventListener("click", () => {
+      input.value = url;
+      hideHistory();
+      form.requestSubmit(); // analyze it right away
+    });
+    li.append(btn);
+    historyList.append(li);
+  }
+  historyList.hidden = false;
+}
+
+function hideHistory() {
+  historyList.hidden = true;
+}
+
+// The arrow functions make sure showHistory gets the `filter` value we want
+// (not the event object the browser passes to listeners).
+input.addEventListener("focus", () => showHistory(false));
+input.addEventListener("click", () => showHistory(false)); // re-open if already focused
+input.addEventListener("input", () => showHistory(true));  // filter as the user types
+input.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") hideHistory();
+});
+// Clicking a history item would first "blur" (unfocus) the input and hide the
+// list before the click registers. preventDefault on mousedown keeps focus
+// in the input, so the click goes through.
+historyList.addEventListener("mousedown", (e) => e.preventDefault());
+input.addEventListener("blur", hideHistory);
+
+// ---------------------------------------------------------------------------
+// Preview carousel (‹ › buttons)
+// ---------------------------------------------------------------------------
+
+const previews = $("previews");
+const prevBtn = $("prev-btn");
+const nextBtn = $("next-btn");
+
+// Scroll by exactly one card. We measure the distance from the start of the
+// 1st card to the start of the 2nd (card width + gap). getBoundingClientRect()
+// keeps fractions of a pixel; offsetWidth would round them and drift.
+function scrollPreviews(direction) {
+  const cards = previews.querySelectorAll(".card");
+  const step = cards[1].getBoundingClientRect().left - cards[0].getBoundingClientRect().left;
+  previews.scrollBy({ left: direction * step });
+}
+
+// Hide ‹ at the start of the row and › at the end.
+function updateCarouselButtons() {
+  const maxScroll = previews.scrollWidth - previews.clientWidth;
+  prevBtn.hidden = previews.scrollLeft <= 1;
+  nextBtn.hidden = previews.scrollLeft >= maxScroll - 1; // -1 absorbs rounding
+}
+
+prevBtn.addEventListener("click", () => scrollPreviews(-1));
+nextBtn.addEventListener("click", () => scrollPreviews(1));
+previews.addEventListener("scroll", updateCarouselButtons);
+window.addEventListener("resize", updateCarouselButtons);
+
+// ---------------------------------------------------------------------------
 
 function showError(message) {
   const el = $("error");
@@ -66,6 +184,11 @@ function renderReport(report) {
   renderPreviews(report);
   renderChecks(report.checks);
   $("results").hidden = false;
+
+  // Start each new report at the first preview. This must run after the
+  // results are visible, because hidden elements have no size to measure.
+  previews.scrollTo({ left: 0, behavior: "instant" });
+  updateCarouselButtons();
 }
 
 function renderScore(report) {

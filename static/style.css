@@ -15,6 +15,10 @@
 
 * { box-sizing: border-box; }
 
+/* Make sure the `hidden` attribute always hides an element, even when a class
+   below gives it a `display` value (e.g. the carousel buttons use display: grid). */
+[hidden] { display: none !important; }
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -41,9 +45,13 @@ h3 { margin: 0 0 12px; font-size: 0.85rem; color: var(--muted); text-transform: 
   gap: 8px;
   margin: 24px 0 8px;
 }
-.search input {
-  flex: 1;              /* input takes all remaining space */
+.input-wrap {
+  flex: 1;              /* input area takes all remaining space */
   min-width: 0;
+  position: relative;   /* the history dropdown is positioned relative to this */
+}
+.search input {
+  width: 100%;
   padding: 12px 14px;
   font-size: 1rem;
   border: 1px solid var(--border);
@@ -61,6 +69,44 @@ h3 { margin: 0 0 12px; font-size: 0.85rem; color: var(--muted); text-transform: 
   cursor: pointer;
 }
 .search button:disabled { opacity: 0.6; cursor: wait; }
+
+/* --- Recent URLs dropdown (floats over the content below the input) --- */
+.history {
+  position: absolute;
+  top: calc(100% + 4px);   /* just below the input */
+  left: 0;
+  right: 0;
+  z-index: 10;             /* above the results */
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+}
+.history-label {
+  padding: 4px 14px;
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.history button {
+  display: block;
+  width: 100%;
+  padding: 8px 14px;
+  font: inherit;
+  text-align: left;
+  color: var(--text);
+  background: none;
+  border: none;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;  /* long URLs end with "…" */
+  white-space: nowrap;
+}
+.history button:hover { background: var(--bg); }
 
 .error {
   padding: 12px 14px;
@@ -115,15 +161,58 @@ h3 { margin: 0 0 12px; font-size: 0.85rem; color: var(--muted); text-transform: 
   font-weight: 700;
 }
 
-/* --- Previews grid: 2 columns on wide screens, 1 on phones --- */
-.previews {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
-  gap: 16px;
+/* --- Previews carousel: one row of cards that scrolls sideways --- */
+.carousel {
+  position: relative;   /* the floating buttons are positioned relative to this */
 }
+.previews {
+  --visible: 3;                  /* how many cards fit in the row at once */
+  --gap: 16px;
+  display: flex;
+  gap: var(--gap);
+  overflow-x: auto;              /* allow sideways scrolling (also works with trackpad/swipe) */
+  scroll-snap-type: x mandatory; /* scrolling stops neatly at the start of a card */
+  scroll-behavior: smooth;       /* button clicks glide instead of jumping */
+  scrollbar-width: none;         /* hide the scrollbar (Firefox) */
+}
+.previews::-webkit-scrollbar { display: none; }  /* hide the scrollbar (Chrome/Safari) */
+.previews > .card {
+  /* Size each card so exactly `--visible` cards (plus the gaps between them)
+     fill the row. Then the cards at both ends are always fully visible,
+     instead of one being cut off by a few pixels. */
+  flex: 0 0 calc((100% - (var(--visible) - 1) * var(--gap)) / var(--visible));
+  scroll-snap-align: start;
+}
+/* Fewer cards per view on smaller screens */
+@media (max-width: 760px) { .previews { --visible: 2; } }
+@media (max-width: 520px) { .previews { --visible: 1; } }
+
+/* Round ‹ › buttons floating over the left and right edges */
+.carousel-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);   /* center vertically */
+  z-index: 1;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  font-size: 1.6rem;
+  line-height: 1;
+  color: var(--text);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+}
+.carousel-btn:hover { background: var(--bg); }
+.carousel-btn.prev { left: -12px; }
+.carousel-btn.next { right: -12px; }
+
 .thumbnail {
   width: 100%;
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 16 / 10;
   object-fit: cover;
   object-position: top;
   border: 1px solid var(--border);
@@ -179,13 +268,29 @@ h3 { margin: 0 0 12px; font-size: 0.85rem; color: var(--muted); text-transform: 
 /* --- Checks list --- */
 .checks { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
 .check {
+  position: relative;   /* the colored stripe below is positioned inside this */
   display: flex;
   gap: 12px;
   background: var(--card);
   border: 1px solid var(--border);
-  border-left: 4px solid var(--status-color);
+  border-left: none;    /* the colored stripe below replaces the left border */
   border-radius: 8px;
-  padding: 12px 14px;
+  overflow: hidden;     /* clip the stripe to the card's rounded corners */
+  padding: 12px 14px 12px 18px;   /* extra left padding makes room for the stripe */
+}
+/* The colored stripe. Why not just `border-left: 4px`? With rounded corners,
+   a thick border's inner edge curves too (the slight inner curve you saw).
+   Instead we draw a plain rectangle along the left side. `overflow: hidden`
+   above rounds off its outer corners to match the card, while its inner
+   (right) edge stays a perfectly straight vertical line. */
+.check::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 4px;
+  background: var(--status-color);
 }
 .check.pass { --status-color: var(--pass); }
 .check.warn { --status-color: var(--warn); }
